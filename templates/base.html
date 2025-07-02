@@ -5,6 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, maximum-scale=5.0">
     <title>{% block title %}Bot de Gerenciamento de Clientes{% endblock %}</title>
     
+    <!-- Preconnect to external domains -->
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    
+    <!-- Google Fonts - Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     
@@ -16,6 +24,14 @@
     
     <!-- Custom CSS -->
     <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+    
+    <!-- Meta tags for better SEO and social sharing -->
+    <meta name="description" content="Sistema de gerenciamento de clientes IPTV e VPN com automação WhatsApp">
+    <meta name="keywords" content="IPTV, VPN, clientes, gerenciamento, WhatsApp, automação">
+    <meta name="author" content="Bot Cliente Manager">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🤖</text></svg>">
 </head>
 <body>
     <!-- Navigation -->
@@ -23,43 +39,49 @@
         <div class="container-fluid">
             <a class="navbar-brand" href="{{ url_for('dashboard') }}">
                 <i class="bi bi-robot"></i>
-                Bot Cliente Manager
+                <span class="ms-2">Bot Cliente Manager</span>
             </a>
             
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
             
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('dashboard') }}">
+                        <a class="nav-link {{ 'active' if request.endpoint == 'dashboard' }}" href="{{ url_for('dashboard') }}">
                             <i class="bi bi-speedometer2"></i> 
                             <span class="d-none d-md-inline">Dashboard</span>
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('clients') }}">
+                        <a class="nav-link {{ 'active' if request.endpoint in ['clients', 'add_client', 'edit_client'] }}" href="{{ url_for('clients') }}">
                             <i class="bi bi-people"></i> 
                             <span class="d-none d-md-inline">Clientes</span>
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('messages') }}">
+                        <a class="nav-link {{ 'active' if request.endpoint == 'messages' }}" href="{{ url_for('messages') }}">
                             <i class="bi bi-chat-text"></i> 
                             <span class="d-none d-md-inline">Mensagens</span>
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('whatsapp') }}">
+                        <a class="nav-link {{ 'active' if request.endpoint in ['whatsapp', 'whatsapp_connect', 'whatsapp_disconnect'] }}" href="{{ url_for('whatsapp') }}">
                             <i class="bi bi-whatsapp"></i> 
                             <span class="d-none d-md-inline">WhatsApp</span>
                         </a>
                     </li>
                 </ul>
                 
-                <!-- Theme Toggle -->
+                <!-- Theme Toggle and Status -->
                 <ul class="navbar-nav">
+                    <li class="nav-item me-3">
+                        <span class="navbar-text">
+                            <i class="bi bi-circle-fill text-success status-connected"></i>
+                            <small class="d-none d-md-inline ms-1">Sistema Online</small>
+                        </span>
+                    </li>
                     <li class="nav-item">
                         <button class="btn btn-outline-secondary btn-sm" id="themeToggle" title="Alternar tema">
                             <i class="bi bi-sun-fill" id="themeIcon"></i>
@@ -71,16 +93,31 @@
     </nav>
 
     <!-- Main Content -->
-    <main class="container-fluid" style="margin-top: 80px;">
+    <main class="container-fluid">
         <!-- Flash Messages -->
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
-                        {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                <div class="row">
+                    <div class="col-12">
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+                                <div class="d-flex align-items-center">
+                                    {% if category == 'success' %}
+                                        <i class="bi bi-check-circle-fill me-2"></i>
+                                    {% elif category == 'error' or category == 'danger' %}
+                                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                                    {% elif category == 'warning' %}
+                                        <i class="bi bi-exclamation-circle-fill me-2"></i>
+                                    {% else %}
+                                        <i class="bi bi-info-circle-fill me-2"></i>
+                                    {% endif %}
+                                    <span>{{ message }}</span>
+                                </div>
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        {% endfor %}
                     </div>
-                {% endfor %}
+                </div>
             {% endif %}
         {% endwith %}
 
@@ -88,12 +125,17 @@
         {% block content %}{% endblock %}
     </main>
 
+    <!-- Floating Action Button (for mobile) -->
+    <button class="fab d-md-none" onclick="window.scrollTo({top: 0, behavior: 'smooth'})" title="Voltar ao topo">
+        <i class="bi bi-arrow-up"></i>
+    </button>
+
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     
     <!-- Theme Toggle Script -->
     <script>
-        // Theme management
+        // Theme management with enhanced transitions
         const themeToggle = document.getElementById('themeToggle');
         const themeIcon = document.getElementById('themeIcon');
         const htmlRoot = document.getElementById('html-root');
@@ -108,6 +150,12 @@
             const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
             setTheme(newTheme);
             localStorage.setItem('theme', newTheme);
+            
+            // Add visual feedback
+            this.style.transform = 'scale(0.9)';
+            setTimeout(() => {
+                this.style.transform = 'scale(1)';
+            }, 150);
         });
         
         function setTheme(theme) {
@@ -119,6 +167,76 @@
                 themeIcon.className = 'bi bi-moon-fill';
                 themeToggle.title = 'Alternar para modo escuro';
             }
+        }
+
+        // Enhanced page load animations
+        document.addEventListener('DOMContentLoaded', function() {
+            // Animate cards on load
+            const cards = document.querySelectorAll('.card');
+            cards.forEach((card, index) => {
+                card.style.opacity = '0';
+                card.style.transform = 'translateY(20px)';
+                
+                setTimeout(() => {
+                    card.style.transition = 'all 0.6s cubic-bezier(0.4, 0, 0.2, 1)';
+                    card.style.opacity = '1';
+                    card.style.transform = 'translateY(0)';
+                }, index * 100);
+            });
+
+            // Animate table rows
+            const tableRows = document.querySelectorAll('tbody tr');
+            tableRows.forEach((row, index) => {
+                row.style.opacity = '0';
+                row.style.transform = 'translateX(-20px)';
+                
+                setTimeout(() => {
+                    row.style.transition = 'all 0.4s ease';
+                    row.style.opacity = '1';
+                    row.style.transform = 'translateX(0)';
+                }, index * 50 + 300);
+            });
+
+            // Add smooth scroll behavior
+            document.documentElement.style.scrollBehavior = 'smooth';
+        });
+
+        // Auto-hide alerts after 5 seconds
+        document.addEventListener('DOMContentLoaded', function() {
+            const alerts = document.querySelectorAll('.alert');
+            alerts.forEach(alert => {
+                setTimeout(() => {
+                    const bsAlert = new bootstrap.Alert(alert);
+                    bsAlert.close();
+                }, 5000);
+            });
+        });
+
+        // Enhanced loading states
+        function showLoading(element) {
+            if (element) {
+                element.classList.add('loading');
+                element.style.pointerEvents = 'none';
+            }
+        }
+
+        function hideLoading(element) {
+            if (element) {
+                element.classList.remove('loading');
+                element.style.pointerEvents = 'auto';
+            }
+        }
+
+        // Global error handler
+        window.addEventListener('error', function(e) {
+            console.error('Global error:', e.error);
+        });
+
+        // Service worker registration (for future PWA features)
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                // Service worker can be added here for offline functionality
+            });
         }
     </script>
     
